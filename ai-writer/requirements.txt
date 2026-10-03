@@ -1,0 +1,7 @@
+flask>=3.0
+transformers>=4.40
+torch>=2.2
+sentencepiece>=0.2
+gunicorn>=22.0; platform_system != "Windows"
+waitress>=3.0; platform_system == "Windows"
+pytest>=8.0

@@ -1,0 +1,1122 @@
+<!doctype html>
+<html lang="en" data-theme="dark">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>AI Writer · Intelligent Article Summarizer</title>
+<meta name="description" content="State-of-the-art AI text summarizer powered by BART and T5 transformers with multi-pass chunking and readability analytics.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Newsreader:ital,opsz,wght@0,6..72,400;0,6..72,500;1,6..72,400&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg: #0d0f17;
+  --bg-gradient: radial-gradient(circle at 15% 15%, rgba(99, 102, 241, 0.12) 0%, transparent 40%),
+                      radial-gradient(circle at 85% 85%, rgba(168, 85, 247, 0.1) 0%, transparent 40%),
+                      #0d0f17;
+  --card-bg: rgba(22, 26, 38, 0.75);
+  --card-border: rgba(255, 255, 255, 0.08);
+  --card-border-focus: rgba(99, 102, 241, 0.5);
+  --text-main: #f1f5f9;
+  --text-muted: #94a3b8;
+  --text-dim: #64748b;
+  --accent: #6366f1;
+  --accent-hover: #4f46e5;
+  --accent-glow: rgba(99, 102, 241, 0.35);
+  --emerald: #10b981;
+  --emerald-bg: rgba(16, 185, 129, 0.15);
+  --amber: #f59e0b;
+  --rose: #f43f5e;
+  --input-bg: rgba(15, 18, 28, 0.7);
+  --radius: 16px;
+  --radius-sm: 10px;
+  --ui-font: "Plus Jakarta Sans", system-ui, -apple-system, sans-serif;
+  --read-font: "Newsreader", Georgia, serif;
+  --mono-font: "JetBrains Mono", monospace;
+  --shadow: 0 10px 30px -10px rgba(0,0,0,0.5);
+  --shadow-glow: 0 0 25px rgba(99, 102, 241, 0.2);
+}
+
+[data-theme="light"] {
+  --bg: #f8fafc;
+  --bg-gradient: radial-gradient(circle at 10% 20%, rgba(99, 102, 241, 0.08) 0%, transparent 40%),
+                      radial-gradient(circle at 90% 80%, rgba(236, 72, 153, 0.06) 0%, transparent 40%),
+                      #f8fafc;
+  --card-bg: rgba(255, 255, 255, 0.9);
+  --card-border: rgba(226, 232, 240, 0.8);
+  --card-border-focus: rgba(99, 102, 241, 0.6);
+  --text-main: #0f172a;
+  --text-muted: #64748b;
+  --text-dim: #94a3b8;
+  --accent: #4f46e5;
+  --accent-hover: #4338ca;
+  --accent-glow: rgba(79, 70, 229, 0.2);
+  --emerald: #059669;
+  --emerald-bg: rgba(16, 185, 129, 0.1);
+  --amber: #d97706;
+  --rose: #e11d48;
+  --input-bg: #ffffff;
+  --shadow: 0 10px 30px -10px rgba(0,0,0,0.06);
+  --shadow-glow: 0 0 20px rgba(79, 70, 229, 0.12);
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body {
+  background: var(--bg-gradient);
+  background-attachment: fixed;
+  color: var(--text-main);
+  font: 15px/1.6 var(--ui-font);
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
+header {
+  border-bottom: 1px solid var(--card-border);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  position: sticky;
+  top: 0;
+  z-index: 50;
+  background: rgba(13, 15, 23, 0.6);
+}
+[data-theme="light"] header {
+  background: rgba(255, 255, 255, 0.75);
+}
+
+.nav-container {
+  max-width: 1280px;
+  margin: 0 auto;
+  padding: 16px 24px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.brand {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  text-decoration: none;
+  color: var(--text-main);
+}
+.brand-icon {
+  width: 40px;
+  height: 40px;
+  border-radius: 12px;
+  background: linear-gradient(135deg, #6366f1 0%, #a855f7 100%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: white;
+  box-shadow: var(--shadow-glow);
+}
+.brand h1 {
+  font-size: 20px;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  background: linear-gradient(135deg, var(--text-main) 40%, var(--text-muted) 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+.brand span.tag {
+  font-size: 11px;
+  font-weight: 700;
+  background: var(--emerald-bg);
+  color: var(--emerald);
+  padding: 2px 8px;
+  border-radius: 20px;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.nav-actions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.theme-btn {
+  background: var(--card-bg);
+  border: 1px solid var(--card-border);
+  color: var(--text-muted);
+  width: 38px;
+  height: 38px;
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+.theme-btn:hover {
+  color: var(--text-main);
+  border-color: var(--card-border-focus);
+}
+
+main {
+  max-width: 1280px;
+  margin: 0 auto;
+  padding: 28px 24px 60px;
+  width: 100%;
+  display: grid;
+  gap: 24px;
+}
+
+.hero {
+  text-align: center;
+  max-width: 680px;
+  margin: 0 auto 12px;
+}
+.hero h2 {
+  font-size: clamp(26px, 3.5vw, 36px);
+  font-weight: 800;
+  letter-spacing: -0.03em;
+  line-height: 1.2;
+  margin-bottom: 8px;
+}
+.hero p {
+  color: var(--text-muted);
+  font-size: 16px;
+}
+
+.app-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 24px;
+}
+@media (max-width: 960px) {
+  .app-grid { grid-template-columns: 1fr; }
+}
+
+.card {
+  background: var(--card-bg);
+  border: 1px solid var(--card-border);
+  border-radius: var(--radius);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  box-shadow: var(--shadow);
+  padding: 22px;
+  display: flex;
+  flex-direction: column;
+  transition: border-color 0.2s ease;
+}
+
+.card-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 14px;
+}
+.card-title {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 15px;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+  text-transform: uppercase;
+  color: var(--text-dim);
+}
+
+.pill-group {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+.pill {
+  font-size: 12px;
+  font-family: var(--mono-font);
+  background: var(--input-bg);
+  border: 1px solid var(--card-border);
+  padding: 4px 10px;
+  border-radius: 20px;
+  color: var(--text-muted);
+}
+
+.editor-wrapper {
+  position: relative;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+}
+
+textarea {
+  width: 100%;
+  min-height: 380px;
+  background: var(--input-bg);
+  border: 1px solid var(--card-border);
+  border-radius: var(--radius-sm);
+  padding: 16px;
+  color: var(--text-main);
+  font-family: var(--read-font);
+  font-size: 18px;
+  line-height: 1.6;
+  resize: vertical;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+textarea:focus {
+  outline: none;
+  border-color: var(--card-border-focus);
+  box-shadow: var(--shadow-glow);
+}
+textarea::placeholder {
+  color: var(--text-dim);
+  font-family: var(--ui-font);
+  font-size: 15px;
+}
+
+.quick-toolbar {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  flex-wrap: wrap;
+  margin-top: 12px;
+}
+
+.tool-btn {
+  background: var(--input-bg);
+  border: 1px solid var(--card-border);
+  color: var(--text-muted);
+  font-size: 13px;
+  font-weight: 600;
+  padding: 6px 12px;
+  border-radius: 8px;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  transition: all 0.2s ease;
+}
+.tool-btn:hover {
+  color: var(--text-main);
+  border-color: var(--card-border-focus);
+}
+.tool-btn.active {
+  background: var(--accent);
+  color: white;
+  border-color: var(--accent);
+}
+
+.url-bar {
+  display: none;
+  margin-top: 10px;
+  gap: 8px;
+}
+.url-bar.open {
+  display: flex;
+}
+.url-input {
+  flex: 1;
+  background: var(--input-bg);
+  border: 1px solid var(--card-border);
+  border-radius: 8px;
+  padding: 8px 12px;
+  color: var(--text-main);
+  font-size: 13px;
+}
+.url-input:focus {
+  outline: none;
+  border-color: var(--card-border-focus);
+}
+
+.config-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  gap: 12px;
+  margin-top: 16px;
+  padding-top: 16px;
+  border-top: 1px solid var(--card-border);
+}
+
+.config-item {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.config-label {
+  font-size: 12px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--text-dim);
+}
+select {
+  background: var(--input-bg);
+  border: 1px solid var(--card-border);
+  border-radius: 8px;
+  padding: 8px 10px;
+  color: var(--text-main);
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+}
+select:focus {
+  outline: none;
+  border-color: var(--card-border-focus);
+}
+
+.actions-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-top: 16px;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+.save-checkbox {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  color: var(--text-muted);
+  cursor: pointer;
+}
+.save-checkbox input {
+  accent-color: var(--accent);
+  width: 16px;
+  height: 16px;
+}
+
+.btn-primary {
+  background: linear-gradient(135deg, #6366f1 0%, #4f46e5 100%);
+  color: white;
+  border: none;
+  padding: 11px 24px;
+  border-radius: 10px;
+  font-size: 14px;
+  font-weight: 700;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  box-shadow: 0 4px 15px var(--accent-glow);
+  transition: all 0.2s ease;
+}
+.btn-primary:hover:not(:disabled) {
+  transform: translateY(-1px);
+  box-shadow: 0 6px 20px rgba(99, 102, 241, 0.45);
+}
+.btn-primary:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+  transform: none;
+}
+
+.output-container {
+  min-height: 380px;
+  background: var(--input-bg);
+  border: 1px solid var(--card-border);
+  border-radius: var(--radius-sm);
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  position: relative;
+  overflow-y: auto;
+}
+
+.empty-state {
+  margin: auto;
+  text-align: center;
+  max-width: 320px;
+  color: var(--text-dim);
+}
+.empty-state svg {
+  margin-bottom: 12px;
+  opacity: 0.4;
+}
+.empty-state h3 {
+  font-size: 15px;
+  color: var(--text-muted);
+  margin-bottom: 4px;
+}
+.empty-state p {
+  font-size: 13px;
+}
+
+.loading-state {
+  display: none;
+  margin: auto;
+  text-align: center;
+}
+.loading-state.active {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 16px;
+}
+.spinner {
+  width: 48px;
+  height: 48px;
+  border: 3px solid rgba(99, 102, 241, 0.2);
+  border-top-color: var(--accent);
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+}
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+.loading-text {
+  font-weight: 600;
+  font-size: 15px;
+  color: var(--text-main);
+}
+.loading-timer {
+  font-family: var(--mono-font);
+  font-size: 13px;
+  color: var(--text-muted);
+}
+
+.summary-content {
+  font-family: var(--read-font);
+  font-size: 19px;
+  line-height: 1.7;
+  color: var(--text-main);
+  white-space: pre-wrap;
+  display: none;
+}
+.summary-content.active {
+  display: block;
+}
+
+.stats-grid {
+  display: none;
+  grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
+  gap: 10px;
+  margin-top: 16px;
+}
+.stats-grid.active {
+  display: grid;
+}
+.stat-box {
+  background: var(--input-bg);
+  border: 1px solid var(--card-border);
+  border-radius: 10px;
+  padding: 10px 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.stat-box .val {
+  font-size: 20px;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  font-family: var(--mono-font);
+}
+.stat-box .lbl {
+  font-size: 11px;
+  color: var(--text-dim);
+  text-transform: uppercase;
+  font-weight: 600;
+}
+.stat-box.highlight .val {
+  color: var(--emerald);
+}
+
+.history-card {
+  margin-top: 8px;
+}
+.history-list {
+  list-style: none;
+  display: grid;
+  gap: 12px;
+  margin-top: 12px;
+  max-height: 440px;
+  overflow-y: auto;
+}
+.history-item {
+  background: var(--input-bg);
+  border: 1px solid var(--card-border);
+  border-radius: var(--radius-sm);
+  padding: 16px;
+  display: grid;
+  gap: 10px;
+  transition: all 0.2s ease;
+}
+.history-item:hover {
+  border-color: var(--card-border-focus);
+}
+.history-item p {
+  font-family: var(--read-font);
+  font-size: 16px;
+  line-height: 1.5;
+  color: var(--text-main);
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+.history-meta {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 12px;
+  color: var(--text-dim);
+  flex-wrap: wrap;
+}
+.history-meta .badge {
+  background: rgba(99, 102, 241, 0.15);
+  color: var(--accent);
+  padding: 2px 8px;
+  border-radius: 6px;
+  font-weight: 600;
+}
+.history-actions {
+  display: flex;
+  gap: 8px;
+  margin-left: auto;
+}
+
+.toast {
+  position: fixed;
+  bottom: 24px;
+  right: 24px;
+  background: #1e293b;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  color: white;
+  padding: 12px 20px;
+  border-radius: 10px;
+  box-shadow: 0 10px 25px rgba(0,0,0,0.4);
+  font-size: 14px;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  transform: translateY(100px);
+  opacity: 0;
+  transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+  z-index: 100;
+}
+.toast.show {
+  transform: translateY(0);
+  opacity: 1;
+}
+
+.hotkey-hint {
+  font-size: 11px;
+  color: var(--text-dim);
+  margin-top: 6px;
+  text-align: right;
+}
+kbd {
+  background: var(--input-bg);
+  border: 1px solid var(--card-border);
+  border-radius: 4px;
+  padding: 1px 5px;
+  font-family: var(--mono-font);
+  font-size: 10px;
+}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="nav-container">
+    <a href="/" class="brand">
+      <div class="brand-icon">
+        <svg width="22" height="22" fill="none" stroke="currentColor" stroke-width="2.2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/></svg>
+      </div>
+      <div>
+        <h1>AI Writer</h1>
+      </div>
+      <span class="tag">Transformer AI</span>
+    </a>
+    <div class="nav-actions">
+      <button class="theme-btn" id="themeToggle" title="Toggle dark/light mode">
+        <svg id="moonIcon" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z"/></svg>
+        <svg id="sunIcon" style="display:none" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="5"/><path stroke-linecap="round" stroke-linejoin="round" d="M12 1v2m0 18v2M4.22 4.22l1.42 1.42m12.72 12.72l1.42 1.42M1 12h2m18 0h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/></svg>
+      </button>
+    </div>
+  </div>
+</header>
+
+<main>
+  <div class="hero">
+    <h2>Paste a long article. Get the essence in seconds.</h2>
+    <p>Split, multi-pass summarized, and condensed with Hugging Face deep learning models.</p>
+  </div>
+
+  <div class="app-grid">
+    <!-- Left Column: Source Article Input -->
+    <section class="card" aria-labelledby="in-heading">
+      <div class="card-header">
+        <div class="card-title">
+          <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
+          <span id="in-heading">Source Article</span>
+        </div>
+        <div class="pill-group">
+          <span class="pill" id="wordCount">0 words</span>
+          <span class="pill" id="readTime">0 min read</span>
+        </div>
+      </div>
+
+      <div class="editor-wrapper">
+        <textarea id="text" placeholder="Paste your article here (at least 35 words), or load a sample or file..."></textarea>
+      </div>
+
+      <div class="quick-toolbar">
+        <button type="button" class="tool-btn" id="loadSampleBtn">
+          <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M13 10V3L4 14h7v7l9-11h-7z"/></svg>
+          Try Sample
+        </button>
+        <button type="button" class="tool-btn" id="loadFileBtn">
+          <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"/></svg>
+          Load File (.txt, .md)
+        </button>
+        <button type="button" class="tool-btn" id="toggleUrlBtn">
+          <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1"/></svg>
+          From URL
+        </button>
+        <button type="button" class="tool-btn" id="clearTextBtn" style="margin-left: auto;">
+          Clear
+        </button>
+        <input type="file" id="fileInput" accept=".txt,.md,text/plain" hidden>
+      </div>
+
+      <div class="url-bar" id="urlBar">
+        <input type="url" id="urlInput" class="url-input" placeholder="https://example.com/article-url">
+        <button type="button" class="tool-btn active" id="fetchUrlBtn">Extract</button>
+      </div>
+
+      <div class="config-grid">
+        <div class="config-item">
+          <label class="config-label" for="model">Model Engine</label>
+          <select id="model">
+            {% for m in models %}
+            <option value="{{ m }}" {{ 'selected' if m == default_model }}>
+              {{ model_metadata[m].name }} ({{ model_metadata[m].badge }})
+            </option>
+            {% endfor %}
+          </select>
+        </div>
+
+        <div class="config-item">
+          <label class="config-label" for="length">Summary Length</label>
+          <select id="length">
+            <option value="short">Short (~15%)</option>
+            <option value="medium" selected>Medium (~30%)</option>
+            <option value="long">Long (~45%)</option>
+          </select>
+        </div>
+
+        <div class="config-item">
+          <label class="config-label" for="format">Output Format</label>
+          <select id="format">
+            <option value="paragraph" selected>Standard Paragraph</option>
+            <option value="bullets">Key Bullet Points</option>
+            <option value="tldr">Executive TL;DR</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="actions-row">
+        <label class="save-checkbox">
+          <input type="checkbox" id="save" checked>
+          <span>Save to SQLite History</span>
+        </label>
+        <button class="btn-primary" id="summarizeBtn">
+          <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M13 10V3L4 14h7v7l9-11h-7z"/></svg>
+          <span>Summarize</span>
+        </button>
+      </div>
+      <div class="hotkey-hint">Press <kbd>Ctrl</kbd> + <kbd>Enter</kbd> to summarize</div>
+    </section>
+
+    <!-- Right Column: Summary Output & Metrics -->
+    <section class="card" aria-labelledby="out-heading" aria-live="polite">
+      <div class="card-header">
+        <div class="card-title">
+          <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4"/></svg>
+          <span id="out-heading">Summary Result</span>
+        </div>
+        <div class="quick-toolbar" id="outputActions" style="margin: 0; display: none;">
+          <button type="button" class="tool-btn" id="copyBtn">
+            <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"/></svg>
+            Copy
+          </button>
+          <button type="button" class="tool-btn" id="downloadBtn">
+            <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/></svg>
+            Download
+          </button>
+        </div>
+      </div>
+
+      <div class="output-container" id="outputContainer">
+        <!-- Empty State -->
+        <div class="empty-state" id="emptyState">
+          <svg width="48" height="48" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 00-3.375-3.375h-1.5A1.125 1.125 0 0113.5 7.125v-1.5a3.375 3.375 0 00-3.375-3.375H8.25m0 12.75h7.5m-7.5 3H12M10.5 2.25H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 00-9-9z"/></svg>
+          <h3>No summary generated yet</h3>
+          <p>Provide an article on the left and click <b>Summarize</b>.</p>
+        </div>
+
+        <!-- Loading State -->
+        <div class="loading-state" id="loadingState">
+          <div class="spinner"></div>
+          <div class="loading-text" id="loadingText">Analyzing text & generating summary…</div>
+          <div class="loading-timer" id="loadingTimer">0.0s elapsed</div>
+        </div>
+
+        <!-- Active Summary Text -->
+        <div class="summary-content" id="summaryText"></div>
+      </div>
+
+      <!-- Stats Grid -->
+      <div class="stats-grid" id="statsGrid">
+        <div class="stat-box highlight">
+          <span class="val" id="statReduction">0%</span>
+          <span class="lbl">Words Reduced</span>
+        </div>
+        <div class="stat-box">
+          <span class="val" id="statWords">0 → 0</span>
+          <span class="lbl">Words In / Out</span>
+        </div>
+        <div class="stat-box">
+          <span class="val" id="statEase">0.0</span>
+          <span class="lbl" id="statEaseLabel">Readability Ease</span>
+        </div>
+        <div class="stat-box">
+          <span class="val" id="statGrade">Grade 0</span>
+          <span class="lbl" id="statGradeLabel">Reading Level</span>
+        </div>
+      </div>
+    </section>
+  </div>
+
+  <!-- Bottom: SQLite History Section -->
+  <section class="card history-card" aria-labelledby="hist-heading">
+    <div class="card-header">
+      <div class="card-title">
+        <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+        <span id="hist-heading">Saved History</span>
+      </div>
+      <button type="button" class="tool-btn" id="clearHistoryBtn">Clear History</button>
+    </div>
+    <ul class="history-list" id="historyList">
+      <li style="color: var(--text-dim); text-align: center; padding: 20px;">No saved history entries yet.</li>
+    </ul>
+  </section>
+</main>
+
+<div class="toast" id="toast">
+  <svg width="18" height="18" fill="none" stroke="var(--emerald)" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/></svg>
+  <span id="toastMsg">Action complete</span>
+</div>
+
+<script>
+const $ = id => document.getElementById(id);
+
+// Theme Toggle
+const themeToggle = $('themeToggle');
+const htmlEl = document.documentElement;
+const savedTheme = localStorage.getItem('ai-writer-theme') || (window.matchMedia('(prefers-color-scheme: light)').matches ? 'light' : 'dark');
+setTheme(savedTheme);
+
+function setTheme(theme) {
+  htmlEl.setAttribute('data-theme', theme);
+  localStorage.setItem('ai-writer-theme', theme);
+  $('moonIcon').style.display = theme === 'dark' ? 'block' : 'none';
+  $('sunIcon').style.display = theme === 'light' ? 'block' : 'none';
+}
+themeToggle.addEventListener('click', () => {
+  const current = htmlEl.getAttribute('data-theme');
+  setTheme(current === 'dark' ? 'light' : 'dark');
+});
+
+// Toast notification helper
+function showToast(msg, isError = false) {
+  const t = $('toast');
+  $('toastMsg').textContent = msg;
+  t.style.borderColor = isError ? 'var(--rose)' : 'var(--card-border)';
+  t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), 2800);
+}
+
+// Live Word and Read Time Counter
+const countWords = t => (t.match(/[A-Za-z0-9']+/g) || []).length;
+function updateCounts() {
+  const text = $('text').value;
+  const words = countWords(text);
+  $('wordCount').textContent = words.toLocaleString() + ' words';
+  const readMin = Math.max(1, Math.round(words / 220));
+  $('readTime').textContent = words > 0 ? (words < 100 ? '< 1 min read' : `~${readMin} min read`) : '0 min read';
+}
+$('text').addEventListener('input', updateCounts);
+
+// Drag and drop directly onto textarea
+const textarea = $('text');
+['dragenter', 'dragover'].forEach(name => {
+  textarea.addEventListener(name, e => { e.preventDefault(); textarea.style.borderColor = 'var(--accent)'; });
+});
+['dragleave', 'drop'].forEach(name => {
+  textarea.addEventListener(name, e => { e.preventDefault(); textarea.style.borderColor = ''; });
+});
+textarea.addEventListener('drop', async e => {
+  const files = e.dataTransfer.files;
+  if (files && files[0]) {
+    $('text').value = await files[0].text();
+    updateCounts();
+    showToast(`Loaded ${files[0].name}`);
+  }
+});
+
+// Load sample article
+$('loadSampleBtn').addEventListener('click', async () => {
+  try {
+    const res = await fetch('/api/sample');
+    const data = await res.json();
+    $('text').value = data.text;
+    updateCounts();
+    showToast('Loaded sample article');
+  } catch (e) {
+    showToast('Failed to load sample article', true);
+  }
+});
+
+// File input loader
+$('loadFileBtn').addEventListener('click', () => $('fileInput').click());
+$('fileInput').addEventListener('change', async e => {
+  const f = e.target.files[0];
+  if (!f) return;
+  $('text').value = await f.text();
+  updateCounts();
+  showToast(`Loaded ${f.name}`);
+});
+
+// URL input bar toggle and fetch
+$('toggleUrlBtn').addEventListener('click', () => {
+  $('urlBar').classList.toggle('open');
+  if ($('urlBar').classList.contains('open')) $('urlInput').focus();
+});
+$('fetchUrlBtn').addEventListener('click', async () => {
+  const url = $('urlInput').value.trim();
+  if (!url) return showToast('Please enter a URL', true);
+  const btn = $('fetchUrlBtn');
+  btn.disabled = true;
+  btn.textContent = 'Fetching…';
+  try {
+    const res = await fetch('/api/extract-url', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ url })
+    });
+    const j = await res.json();
+    if (!res.ok) return showToast(j.error || 'Failed to fetch article', true);
+    $('text').value = j.text;
+    updateCounts();
+    $('urlBar').classList.remove('open');
+    showToast('Article text extracted!');
+  } catch (err) {
+    showToast('Network error fetching URL', true);
+  } finally {
+    btn.disabled = false;
+    btn.textContent = 'Extract';
+  }
+});
+
+// Clear Text
+$('clearTextBtn').addEventListener('click', () => {
+  $('text').value = '';
+  updateCounts();
+  showToast('Cleared article text');
+});
+
+// Copy Summary
+$('copyBtn').addEventListener('click', async () => {
+  const text = $('summaryText').textContent;
+  if (!text) return;
+  await navigator.clipboard.writeText(text);
+  showToast('Summary copied to clipboard!');
+});
+
+// Download Summary
+$('downloadBtn').addEventListener('click', () => {
+  const text = $('summaryText').textContent;
+  if (!text) return;
+  const blob = new Blob([text], { type: 'text/markdown;charset=utf-8' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = `summary-${new Date().toISOString().slice(0,10)}.md`;
+  a.click();
+  showToast('Downloaded summary file');
+});
+
+// Hotkey: Ctrl+Enter
+window.addEventListener('keydown', e => {
+  if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') {
+    e.preventDefault();
+    $('summarizeBtn').click();
+  }
+});
+
+// Summarize Action
+let timerInterval = null;
+let currentSummary = '';
+
+$('summarizeBtn').addEventListener('click', async () => {
+  const text = $('text').value.trim();
+  const wordTotal = countWords(text);
+  if (wordTotal < 35) {
+    return showToast(`Please provide at least 35 words (currently ${wordTotal})`, true);
+  }
+
+  const btn = $('summarizeBtn');
+  btn.disabled = true;
+
+  // UI state transition
+  $('emptyState').style.display = 'none';
+  $('summaryText').classList.remove('active');
+  $('statsGrid').classList.remove('active');
+  $('outputActions').style.display = 'none';
+  $('loadingState').classList.add('active');
+
+  let startTime = Date.now();
+  timerInterval = setInterval(() => {
+    const elapsed = ((Date.now() - startTime) / 1000).toFixed(1);
+    $('loadingTimer').textContent = `${elapsed}s elapsed`;
+    if (elapsed > 10) {
+      $('loadingText').textContent = 'Heavy model pass in progress (this is normal on CPU)…';
+    }
+  }, 100);
+
+  try {
+    const res = await fetch('/api/summarize', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        text: text,
+        model: $('model').value,
+        length: $('length').value,
+        format: $('format').value,
+        save: $('save').checked,
+      })
+    });
+    const data = await res.json();
+    clearInterval(timerInterval);
+
+    if (!res.ok) {
+      $('loadingState').classList.remove('active');
+      $('emptyState').style.display = 'block';
+      return showToast(data.error || 'Summarization failed', true);
+    }
+
+    currentSummary = data.summary;
+    $('loadingState').classList.remove('active');
+    $('summaryText').textContent = data.summary;
+    $('summaryText').classList.add('active');
+    $('outputActions').style.display = 'flex';
+
+    // Populate Metrics
+    const st = data.stats;
+    $('statReduction').textContent = `${st.reduction_pct}%`;
+    $('statWords').textContent = `${st.original.words} → ${st.summary.words}`;
+    $('statEase').textContent = st.summary.flesch_reading_ease;
+    $('statEaseLabel').textContent = `Ease: ${st.summary.label}`;
+    $('statGrade').textContent = `Grade ${st.summary.grade_level}`;
+    $('statGradeLabel').textContent = st.summary.grade_label || 'School Level';
+    $('statsGrid').classList.add('active');
+
+    if ($('save').checked) {
+      loadHistory();
+    }
+    showToast('Summary generated successfully!');
+  } catch (err) {
+    clearInterval(timerInterval);
+    $('loadingState').classList.remove('active');
+    $('emptyState').style.display = 'block';
+    showToast('Server connection failed. Ensure backend is running.', true);
+  } finally {
+    btn.disabled = false;
+  }
+});
+
+// Load History
+async function loadHistory() {
+  try {
+    const res = await fetch('/api/history');
+    const rows = await res.json();
+    const list = $('historyList');
+    if (!rows.length) {
+      list.innerHTML = '<li style="color: var(--text-dim); text-align: center; padding: 20px;">No saved history entries yet.</li>';
+      return;
+    }
+
+    list.innerHTML = '';
+    rows.forEach(r => {
+      const li = document.createElement('li');
+      li.className = 'history-item';
+
+      const p = document.createElement('p');
+      p.textContent = r.summary;
+
+      const meta = document.createElement('div');
+      meta.className = 'history-meta';
+
+      const dateStr = new Date(r.created_at).toLocaleString();
+      const modelBadge = document.createElement('span');
+      modelBadge.className = 'badge';
+      modelBadge.textContent = r.model.split('/').pop();
+
+      const reductionBadge = document.createElement('span');
+      reductionBadge.className = 'badge';
+      reductionBadge.style.color = 'var(--emerald)';
+      reductionBadge.textContent = `-${r.stats.reduction_pct}%`;
+
+      const wordsSpan = document.createElement('span');
+      wordsSpan.textContent = `${r.stats.original.words} → ${r.stats.summary.words} words`;
+
+      meta.append(modelBadge, reductionBadge, wordsSpan, dateStr);
+
+      const actions = document.createElement('div');
+      actions.className = 'history-actions';
+
+      const loadBtn = document.createElement('button');
+      loadBtn.className = 'tool-btn';
+      loadBtn.textContent = 'Restore Article';
+      loadBtn.onclick = () => {
+        $('text').value = r.original;
+        updateCounts();
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+        showToast('Restored article to editor');
+      };
+
+      const copyHBtn = document.createElement('button');
+      copyHBtn.className = 'tool-btn';
+      copyHBtn.textContent = 'Copy';
+      copyHBtn.onclick = async () => {
+        await navigator.clipboard.writeText(r.summary);
+        showToast('Copied summary from history!');
+      };
+
+      const delBtn = document.createElement('button');
+      delBtn.className = 'tool-btn';
+      delBtn.textContent = 'Delete';
+      delBtn.onclick = async () => {
+        await fetch(`/api/history/${r.id}`, { method: 'DELETE' });
+        loadHistory();
+        showToast('History entry deleted');
+      };
+
+      actions.append(loadBtn, copyHBtn, delBtn);
+      meta.append(actions);
+      li.append(p, meta);
+      list.append(li);
+    });
+  } catch (e) {
+    console.error('Failed to load history', e);
+  }
+}
+
+$('clearHistoryBtn').addEventListener('click', async () => {
+  if (confirm('Are you sure you want to clear all saved summaries?')) {
+    await fetch('/api/history', { method: 'DELETE' });
+    loadHistory();
+    showToast('All history cleared');
+  }
+});
+
+// Initial runs
+updateCounts();
+loadHistory();
+</script>
+</body>
+</html>
